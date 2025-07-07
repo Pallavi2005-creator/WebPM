@@ -1,5 +1,5 @@
 import type { CreateTaskFormData } from "@/components/task/create-task-dialog";
-import { fetchData, postData, updateData } from "@/lib/fetch-util";
+import { fetchData, postData, updateData, deleteData } from "@/lib/fetch-util";
 import type { TaskPriority, TaskStatus } from "@/types";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -190,6 +190,49 @@ export const useWatchTaskMutation = () => {
       queryClient.invalidateQueries({
         queryKey: ["task-activity", data._id],
       });
+    },
+  });
+};
+
+export const useAchievedTasksQuery = () => {
+  return useQuery({
+    queryKey: ["achieved-tasks"],
+    queryFn: async () => {
+      return await fetchData("/tasks/achieved");
+    },
+  });
+};
+
+export const useRestoreTaskMutation = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ taskId }: { taskId: string }) => {
+      return await updateData(`/tasks/${taskId}/restore`, { isArchived: false });
+    },
+    onSuccess: () => {
+      // Invalidate and refetch achieved tasks
+      queryClient.invalidateQueries({ queryKey: ["achieved-tasks"] });
+      // Also invalidate other task-related queries
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["my-tasks"] });
+    },
+  });
+};
+
+// Hook to permanently delete a task
+export const useDeleteTaskMutation = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ taskId }: { taskId: string }) => {
+      return await deleteData(`/tasks/${taskId}`);
+    },
+    onSuccess: () => {
+      // Invalidate and refetch achieved tasks
+      queryClient.invalidateQueries({ queryKey: ["achieved-tasks"] });
+      // Also invalidate other task-related queries
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
     },
   });
 };

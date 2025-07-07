@@ -28,6 +28,10 @@ const Workspaces = () => {
     return <Loader />;
   }
 
+   if (!workspaces) {
+    return <Loader />;
+  }
+
   return (
     <>
       <div className="space-y-8">

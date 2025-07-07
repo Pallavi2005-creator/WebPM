@@ -632,6 +632,176 @@ const achievedTask = async (req, res) => {
   }
 };
 
+// Add these functions to your controllers/task.js file
+
+const getAchievedTasks = async (req, res) => {
+  try {
+    // Find all archived tasks where the user is either assigned or is a member of the project
+    const tasks = await Task.find({ 
+      isArchived: true,
+      $or: [
+        { assignees: { $in: [req.user._id] } },
+        { createdBy: req.user._id }
+      ]
+    })
+      .populate("assignees", "name profilePicture")
+      .populate("project", "title workspace")
+      .populate("createdBy", "name profilePicture")
+      .sort({ updatedAt: -1 });
+
+    // Filter tasks based on workspace membership
+    const filteredTasks = [];
+    
+    for (const task of tasks) {
+      const project = await Project.findById(task.project._id);
+      if (project) {
+        const workspace = await Workspace.findById(project.workspace);
+        if (workspace) {
+          const isMember = workspace.members.some(
+            (member) => member.user.toString() === req.user._id.toString()
+          );
+          if (isMember) {
+            filteredTasks.push(task);
+          }
+        }
+      }
+    }
+
+    res.status(200).json(filteredTasks);
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({
+      message: "Internal server error",
+    });
+  }
+};
+
+const restoreTask = async (req, res) => {
+  try {
+    const { taskId } = req.params;
+    const { isArchived } = req.body;
+
+    const task = await Task.findById(taskId);
+
+    if (!task) {
+      return res.status(404).json({
+        message: "Task not found",
+      });
+    }
+
+    const project = await Project.findById(task.project);
+
+    if (!project) {
+      return res.status(404).json({
+        message: "Project not found",
+      });
+    }
+
+    const workspace = await Workspace.findById(project.workspace);
+
+    if (!workspace) {
+      return res.status(404).json({
+        message: "Workspace not found",
+      });
+    }
+
+    const isMember = workspace.members.some(
+      (member) => member.user.toString() === req.user._id.toString()
+    );
+
+    if (!isMember) {
+      return res.status(403).json({
+        message: "You are not a member of this workspace",
+      });
+    }
+
+    const wasArchived = task.isArchived;
+    task.isArchived = isArchived;
+    await task.save();
+
+    // record activity
+    await recordActivity(req.user._id, "updated_task", "Task", taskId, {
+      description: `${wasArchived ? "restored" : "archived"} task ${task.title}`,
+    });
+
+    res.status(200).json(task);
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({
+      message: "Internal server error",
+    });
+  }
+};
+
+const deleteTask = async (req, res) => {
+  try {
+    const { taskId } = req.params;
+
+    const task = await Task.findById(taskId);
+
+    if (!task) {
+      return res.status(404).json({
+        message: "Task not found",
+      });
+    }
+
+    const project = await Project.findById(task.project);
+
+    if (!project) {
+      return res.status(404).json({
+        message: "Project not found",
+      });
+    }
+
+    const workspace = await Workspace.findById(project.workspace);
+
+    if (!workspace) {
+      return res.status(404).json({
+        message: "Workspace not found",
+      });
+    }
+
+    const isMember = workspace.members.some(
+      (member) => member.user.toString() === req.user._id.toString()
+    );
+
+    if (!isMember) {
+      return res.status(403).json({
+        message: "You are not a member of this workspace",
+      });
+    }
+
+    // Remove task from project's tasks array
+    project.tasks = project.tasks.filter(
+      (id) => id.toString() !== taskId.toString()
+    );
+    await project.save();
+
+    // Delete all comments associated with this task
+    await Comment.deleteMany({ task: taskId });
+
+    // Delete all activity logs associated with this task
+    await ActivityLog.deleteMany({ resourceId: taskId });
+
+    // Delete the task
+    await Task.findByIdAndDelete(taskId);
+
+    // record activity
+    await recordActivity(req.user._id, "deleted_task", "Task", taskId, {
+      description: `permanently deleted task ${task.title}`,
+    });
+
+    res.status(200).json({
+      message: "Task deleted successfully",
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({
+      message: "Internal server error",
+    });
+  }
+};
+
 const getMyTasks = async (req, res) => {
   try {
     const tasks = await Task.find({ assignees: { $in: [req.user._id] } })
@@ -646,6 +816,22 @@ const getMyTasks = async (req, res) => {
     });
   }
 };
+
+// const io = req.app.get("io");
+
+// // Save notification in DB
+// const newNotification = await Notification.create({
+//   userId: targetUserId, // replace with actual userId
+//   type: "task_assigned",
+//   title: "New Task Assigned",
+//   message: "A new task has been assigned to you",
+//   senderName: req.user.name,
+//   senderAvatar: req.user.avatar,
+// });
+
+// // Emit to frontend
+// io.emit("new_notification", newNotification);
+
 
 export {
   createTask,
@@ -663,4 +849,7 @@ export {
   watchTask,
   achievedTask,
   getMyTasks,
+  getAchievedTasks,
+  restoreTask,
+  deleteTask,
 };

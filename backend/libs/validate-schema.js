@@ -72,7 +72,14 @@ const taskSchema = z.object({
   assignees: z.array(z.string()).min(1, "At least one assignee is required"),
 });
 
+const updateWorkspaceSchema = z.object({
+  name: z.string().min(1, "Workspace name is required").max(100, "Workspace name must be less than 100 characters"),
+  description: z.string().max(500, "Description must be less than 500 characters").optional(),
+  color: z.string().regex(/^#[0-9A-F]{6}$/i, "Color must be a valid hex color"),
+});
+
 export {
+  updateWorkspaceSchema,
   registerSchema,
   loginSchema,
   verifyEmailSchema,
