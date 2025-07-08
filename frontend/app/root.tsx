@@ -11,6 +11,9 @@ import type { Route } from "./+types/root";
 import "./app.css";
 import ReactQueryProvider from "./provider/react-query-provider";
 import { ThemeProvider } from "./components/theme-provider";
+import { GoogleOAuthProvider} from "@react-oauth/google"; 
+
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "982388611359-h93n0a75o75hgtfj6o6vrdsaaohlev7e.apps.googleusercontent.com";
 
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -45,12 +48,14 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
 export default function App({ children }: { children?: React.ReactNode }) {
   return (
-    <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
-      {children}
     <ReactQueryProvider>
-      <Outlet />
+      <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+        <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
+          {children}
+          <Outlet />
+        </ThemeProvider>
+      </GoogleOAuthProvider>
     </ReactQueryProvider>
-    </ThemeProvider>
   );
 }
 

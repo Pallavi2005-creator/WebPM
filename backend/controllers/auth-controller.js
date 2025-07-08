@@ -4,6 +4,67 @@ import jwt from "jsonwebtoken";
 import Verification from "../models/verification.js";
 import { sendEmail } from "../libs/send-email.js";
 import aj from "../libs/arcjet.js";
+import { OAuth2Client } from 'google-auth-library';
+
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+const googleAuth = async (req, res) => {
+  try {
+    const { token } = req.body;
+
+    // Verify the Google token
+    const ticket = await client.verifyIdToken({
+      idToken: token,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+
+    const payload = ticket.getPayload();
+    const { email, name, email_verified } = payload;
+
+    if (!email_verified) {
+      return res.status(400).json({
+        message: "Email not verified by Google",
+      });
+    }
+
+    // Check if user already exists
+    let user = await User.findOne({ email });
+
+    if (user) {
+      // User exists, update last login
+      user.lastLogin = new Date();
+      await user.save();
+    } else {
+      // Create new user
+      user = await User.create({
+        email,
+        name,
+        password: null, // Google users don't have password
+        isEmailVerified: true, // Google emails are pre-verified
+        authProvider: 'google',
+      });
+    }
+
+    // Generate JWT token
+    const jwtToken = jwt.sign(
+      { userId: user._id, purpose: "login" },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
+    const userData = user.toObject();
+    delete userData.password;
+
+    res.status(200).json({
+      message: "Google authentication successful",
+      token: jwtToken,
+      user: userData,
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
 
 const registerUser = async (req, res) => {
   try {
@@ -327,6 +388,7 @@ const verifyResetPasswordTokenAndResetPassword = async (req, res) => {
   }
 };
 export {
+  googleAuth,
   registerUser,
   loginUser,
   verifyEmail,

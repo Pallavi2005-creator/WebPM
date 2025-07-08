@@ -1,5 +1,4 @@
 import express from "express";
-
 import { z } from "zod";
 import { validateRequest } from "zod-express-middleware";
 import {
@@ -10,6 +9,7 @@ import {
   verifyEmailSchema,
 } from "../libs/validate-schema.js";
 import {
+  googleAuth,
   loginUser,
   registerUser,
   resetPasswordRequest,
@@ -18,6 +18,16 @@ import {
 } from "../controllers/auth-controller.js";
 
 const router = express.Router();
+
+router.post(
+  "/google",
+  validateRequest({
+    body: z.object({
+      token: z.string().min(1, "Token is required"),
+    }),
+  }),
+  googleAuth
+);
 
 router.post(
   "/register",

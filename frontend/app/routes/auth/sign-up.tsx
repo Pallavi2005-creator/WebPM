@@ -22,13 +22,17 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Link, useNavigate } from "react-router";
-import { useSignUpMutation } from "@/hooks/use-auth";
+import { useSignUpMutation, useGoogleAuthMutation } from "@/hooks/use-auth";
 import { toast } from "sonner";
 import { Eye, EyeOff } from "lucide-react";
+import { GoogleLogin } from "@react-oauth/google";
+import { useAuth } from "@/provider/auth-context";
 
 export type SignupFormData = z.infer<typeof signUpSchema>;
 
 const SignUp = () => {
+  const { login } = useAuth();
+const { mutate: googleMutate, isPending: isGooglePending } = useGoogleAuthMutation();
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -72,6 +76,26 @@ const SignUp = () => {
   const toggleConfirmPasswordVisibility = () => {
     setShowConfirmPassword(!showConfirmPassword);
   };
+
+  const handleGoogleSuccess = (credentialResponse) => {
+  if (credentialResponse.credential) {
+    googleMutate(
+      { token: credentialResponse.credential },
+      {
+        onSuccess: (data) => {
+          login(data);
+          toast.success("Google sign-up successful");
+          navigate("/dashboard");
+        },
+        onError: (error: any) => {
+          const errorMessage =
+            error.response?.data?.message || "Google sign-up failed";
+          toast.error(errorMessage);
+        },
+      }
+    );
+  }
+};
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-muted/40 p-4">
@@ -192,7 +216,7 @@ const SignUp = () => {
           <CardFooter className="flex items-center justify-center mt-6">
             <div className="flex items-center justify-center">
               <p className="text-sm text-muted-foreground">
-                Already have an account? <Link to="/sign-in">Sign in</Link>
+                Already have an account? <Link to="/sign-in" className="text-blue-500">Sign in</Link>
               </p>
             </div>
           </CardFooter>

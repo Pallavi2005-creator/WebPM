@@ -16,7 +16,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { useLoginMutation } from "@/hooks/use-auth";
+import { useLoginMutation, useGoogleAuthMutation } from "@/hooks/use-auth";
 import { signInSchema } from "@/lib/schema";
 import { useAuth } from "@/provider/auth-context";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -25,14 +25,15 @@ import { useForm } from "react-hook-form";
 import { Link, useNavigate } from "react-router";
 import { toast } from "sonner";
 import { z } from "zod";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { GoogleLogin, useGoogleLogin } from "@react-oauth/google";
 
 type SigninFormData = z.infer<typeof signInSchema>;
 
 const SignIn = () => {
   const navigate = useNavigate();
-  const { login } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
+  const { login } = useAuth(); // Get the login function from auth context
 
   const form = useForm<SigninFormData>({
     resolver: zodResolver(signInSchema),
@@ -43,6 +44,57 @@ const SignIn = () => {
   });
 
   const { mutate, isPending } = useLoginMutation();
+  const { mutate: googleMutate, isPending: isGooglePending } = useGoogleAuthMutation();
+
+  // Disable Google One Tap when component mounts
+  useEffect(() => {
+    // Function to disable One Tap
+    const disableOneTap = () => {
+      if (window.google && window.google.accounts && window.google.accounts.id) {
+        window.google.accounts.id.cancel();
+        window.google.accounts.id.disableAutoSelect();
+      }
+      
+      // Hide any existing One Tap prompts
+      const oneTapElements = document.querySelectorAll('[data-testid="google-one-tap"], .g_id_signin, #credential_picker_container, [id^="credential_picker"]');
+      oneTapElements.forEach(el => {
+        el.style.display = 'none';
+        el.remove();
+      });
+    };
+
+    // Run immediately
+    disableOneTap();
+    
+    // Run after a short delay to catch any delayed One Tap initialization
+    const timeoutId = setTimeout(disableOneTap, 100);
+    
+    // Set up a mutation observer to catch any dynamically added One Tap elements
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        mutation.addedNodes.forEach((node) => {
+          if (node.nodeType === 1) { // Element node
+            const element = node as Element;
+            if (element.matches && (
+              element.matches('[data-testid="google-one-tap"]') ||
+              element.matches('.g_id_signin') ||
+              element.matches('#credential_picker_container') ||
+              element.matches('[id^="credential_picker"]')
+            )) {
+              element.remove();
+            }
+          }
+        });
+      });
+    });
+    
+    observer.observe(document.body, { childList: true, subtree: true });
+    
+    return () => {
+      clearTimeout(timeoutId);
+      observer.disconnect();
+    };
+  }, []);
 
   const handleOnSubmit = (values: SigninFormData) => {
     mutate(values, {
@@ -64,6 +116,51 @@ const SignIn = () => {
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
   };
+
+  const handleGoogleSuccess = (credentialResponse: any) => {
+    if (credentialResponse.credential) {
+      googleMutate(
+        { token: credentialResponse.credential },
+        {
+          onSuccess: (data) => {
+            login(data);
+            toast.success("Google sign-in successful");
+            navigate("/dashboard");
+          },
+          onError: (error: any) => {
+            const errorMessage =
+              error.response?.data?.message || "Google sign-in failed";
+            toast.error(errorMessage);
+          },
+        }
+      );
+    }
+  };
+
+  const login1 = useGoogleLogin({
+    onSuccess: (credentialResponse) => {
+      if (credentialResponse.credential) {
+        googleMutate(
+          { token: credentialResponse.credential },
+          {
+            onSuccess: (data) => {
+              login(data);
+              toast.success("Google sign-in successful");
+              navigate("/dashboard");
+            },
+            onError: (error: any) => {
+              const errorMessage =
+                error.response?.data?.message || "Google sign-in failed";
+              toast.error(errorMessage);
+            },
+          }
+        );
+      }
+    },
+    onError: () => {
+      toast.error("Google sign-in failed");
+    },
+  })
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-muted/40 p-4">
@@ -89,7 +186,7 @@ const SignIn = () => {
                     <FormControl>
                       <Input
                         type="email"
-                        placeholder="email@example.com"
+                        placeholder="Enter your email"
                         {...field}
                       />
                     </FormControl>
@@ -140,13 +237,48 @@ const SignIn = () => {
               <Button type="submit" className="w-full" disabled={isPending}>
                 {isPending ? "Signing in..." : "Sign in"}
               </Button>
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-background px-2 text-muted-foreground">
+                    Or continue with
+                  </span>
+                </div>
+              </div>
+              <div id="google-signin-button">
+                <GoogleLogin
+                  onSuccess={handleGoogleSuccess}
+                  onError={() => {
+                    toast.error("Google sign-in failed");
+                  }}
+                  flow="auth-code"
+                  text="signin_with"
+                  shape="rectangular"
+                  size="large"
+                  width="384"
+                  disabled={isGooglePending}
+                  useOneTap={false}
+                  auto_select={false}
+                  cancel_on_tap_outside={true}
+                  prompt_parent_id="google-signin-button"
+                />
+              </div>
+
+              {isGooglePending && (
+                <div className="flex items-center justify-center mt-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span className="ml-2 text-sm">Signing in with Google...</span>
+                </div>
+              )}
             </form>
           </Form>
 
           <CardFooter className="flex items-center justify-center mt-6">
             <div className="flex items-center justify-center">
               <p className="text-sm text-muted-foreground">
-                Don&apos;t have an account? <Link to="/sign-up">Sign up</Link>
+                Don&apos;t have an account? <Link to="/sign-up" className="text-blue-500">Sign up</Link>
               </p>
             </div>
           </CardFooter>

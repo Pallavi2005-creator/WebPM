@@ -817,22 +817,6 @@ const getMyTasks = async (req, res) => {
   }
 };
 
-// const io = req.app.get("io");
-
-// // Save notification in DB
-// const newNotification = await Notification.create({
-//   userId: targetUserId, // replace with actual userId
-//   type: "task_assigned",
-//   title: "New Task Assigned",
-//   message: "A new task has been assigned to you",
-//   senderName: req.user.name,
-//   senderAvatar: req.user.avatar,
-// });
-
-// // Emit to frontend
-// io.emit("new_notification", newNotification);
-
-
 export {
   createTask,
   getTaskById,

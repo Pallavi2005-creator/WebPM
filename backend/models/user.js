@@ -18,6 +18,20 @@ const userSchema = new Schema(
     twoFAOtp: { type: String, select: false },
     twoFAOtpExpires: { type: Date, select: false },
   },
+  {
+  authProvider: {
+    type: String,
+    enum: ['local', 'google'],
+    default: 'local'
+  },
+  // Make password optional for Google users
+  password: {
+    type: String,
+    required: function() {
+      return this.authProvider === 'local';
+    }
+  }
+},
   { timestamps: true }
 );
 const User = mongoose.model("User", userSchema);
