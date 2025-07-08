@@ -1,4 +1,4 @@
-import { fetchData, updateData } from "@/lib/fetch-util";
+import { fetchData, updateData, uploadFile } from "@/lib/fetch-util";
 import type {
   ChangePasswordFormData,
   ProfileFormData,
@@ -24,5 +24,11 @@ export const useChangePassword = () => {
 export const useUpdateUserProfile = () => {
   return useMutation({
     mutationFn: (data: ProfileFormData) => updateData("/users/profile", data),
+  });
+};
+
+export const useUploadAvatar = () => {
+  return useMutation({
+    mutationFn: (formData: FormData) => uploadFile("/users/upload-avatar", formData),
   });
 };

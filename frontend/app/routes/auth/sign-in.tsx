@@ -20,17 +20,19 @@ import { useLoginMutation } from "@/hooks/use-auth";
 import { signInSchema } from "@/lib/schema";
 import { useAuth } from "@/provider/auth-context";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2 } from "lucide-react";
+import { Loader2, Eye, EyeOff } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { Link, useNavigate } from "react-router";
 import { toast } from "sonner";
 import { z } from "zod";
+import { useState } from "react";
 
 type SigninFormData = z.infer<typeof signInSchema>;
 
 const SignIn = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
+  const [showPassword, setShowPassword] = useState(false);
 
   const form = useForm<SigninFormData>({
     resolver: zodResolver(signInSchema),
@@ -39,7 +41,8 @@ const SignIn = () => {
       password: "",
     },
   });
-const { mutate, isPending } = useLoginMutation();
+
+  const { mutate, isPending } = useLoginMutation();
 
   const handleOnSubmit = (values: SigninFormData) => {
     mutate(values, {
@@ -57,6 +60,11 @@ const { mutate, isPending } = useLoginMutation();
       },
     });
   };
+
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
+  };
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-muted/40 p-4">
       <Card className="max-w-md w-full shadow-xl">
@@ -104,11 +112,25 @@ const { mutate, isPending } = useLoginMutation();
                       </Link>
                     </div>
                     <FormControl>
-                      <Input
-                        type="password"
-                        placeholder="********"
-                        {...field}
-                      />
+                      <div className="relative">
+                        <Input
+                          type={showPassword ? "text" : "password"}
+                          placeholder="********"
+                          {...field}
+                          className="pr-10"
+                        />
+                        <button
+                          type="button"
+                          className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                          onClick={togglePasswordVisibility}
+                        >
+                          {showPassword ? (
+                            <EyeOff className="h-4 w-4" />
+                          ) : (
+                            <Eye className="h-4 w-4" />
+                          )}
+                        </button>
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>

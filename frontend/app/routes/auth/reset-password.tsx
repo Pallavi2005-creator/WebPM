@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { useResetPasswordMutation } from "@/hooks/use-auth";
 import { resetPasswordSchema } from "@/lib/schema";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowBigDown, ArrowLeft, CheckCircle, Loader2 } from "lucide-react";
+import { ArrowBigDown, ArrowLeft, CheckCircle, Loader2, Eye, EyeOff } from "lucide-react";
 import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Link, useSearchParams } from "react-router";
@@ -27,6 +27,8 @@ const ResetPassword = () => {
   const token = searchParams.get("token");
 
   const [isSuccess, setIsSuccess] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const { mutate: resetPassword, isPending } = useResetPasswordMutation();
 
   const form = useForm<ResetPasswordFormData>({
@@ -56,6 +58,14 @@ const ResetPassword = () => {
         },
       }
     );
+  };
+
+  const toggleNewPasswordVisibility = () => {
+    setShowNewPassword(!showNewPassword);
+  };
+
+  const toggleConfirmPasswordVisibility = () => {
+    setShowConfirmPassword(!showConfirmPassword);
   };
 
   return (
@@ -95,7 +105,25 @@ const ResetPassword = () => {
                       <FormItem>
                         <FormLabel>New Password</FormLabel>
                         <FormControl>
-                          <Input {...field} placeholder="Enter your email" />
+                          <div className="relative">
+                            <Input
+                              type={showNewPassword ? "text" : "password"}
+                              placeholder="Enter your new password"
+                              {...field}
+                              className="pr-10"
+                            />
+                            <button
+                              type="button"
+                              className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                              onClick={toggleNewPasswordVisibility}
+                            >
+                              {showNewPassword ? (
+                                <EyeOff className="h-4 w-4" />
+                              ) : (
+                                <Eye className="h-4 w-4" />
+                              )}
+                            </button>
+                          </div>
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -106,9 +134,27 @@ const ResetPassword = () => {
                     control={form.control}
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>New Password</FormLabel>
+                        <FormLabel>Confirm New Password</FormLabel>
                         <FormControl>
-                          <Input {...field} placeholder="Enter your email" />
+                          <div className="relative">
+                            <Input
+                              type={showConfirmPassword ? "text" : "password"}
+                              placeholder="Confirm your new password"
+                              {...field}
+                              className="pr-10"
+                            />
+                            <button
+                              type="button"
+                              className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                              onClick={toggleConfirmPasswordVisibility}
+                            >
+                              {showConfirmPassword ? (
+                                <EyeOff className="h-4 w-4" />
+                              ) : (
+                                <Eye className="h-4 w-4" />
+                              )}
+                            </button>
+                          </div>
                         </FormControl>
                         <FormMessage />
                       </FormItem>

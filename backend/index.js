@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 import express from "express";
 import mongoose from "mongoose";
 import morgan from "morgan";
+import path from "path";
 
 import routes from "./routes/index.js";
 
@@ -34,6 +35,8 @@ app.get("/", async (req, res) => {
     message: "Welcome to WebPM API",
   });
 });
+
+app.use('/uploads/avatars', express.static(path.join(process.cwd(), 'uploads/avatars')));
 // http:localhost:5000/api-v1/
 app.use("/api-v1", routes);
 

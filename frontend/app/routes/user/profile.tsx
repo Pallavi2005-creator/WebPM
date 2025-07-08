@@ -2,6 +2,8 @@ import { BackButton } from "@/components/back-button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { useState, useEffect } from "react";
+import { uploadFile } from "@/lib/fetch-util";
 import {
   Card,
   CardContent,
@@ -24,11 +26,12 @@ import {
   useChangePassword,
   useUpdateUserProfile,
   useUserProfileQuery,
+  useUploadAvatar,
 } from "@/hooks/use-user";
 import { useAuth } from "@/provider/auth-context";
 import type { User } from "@/types";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { AlertCircle, Loader, Loader2 } from "lucide-react";
+import { AlertCircle, Loader, Loader2, Eye, EyeOff } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
@@ -54,11 +57,15 @@ const profileSchema = z.object({
   profilePicture: z.string().optional(),
 });
 
+
 export type ChangePasswordFormData = z.infer<typeof changePasswordSchema>;
 
 export type ProfileFormData = z.infer<typeof profileSchema>;
 
 const Profile = () => {
+const [uploading, setUploading] = useState(false);
+ const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const { data: user, isPending } = useUserProfileQuery() as {
     data: User;
     isPending: boolean;
@@ -133,6 +140,69 @@ const Profile = () => {
     );
   };
 
+  const handleAvatarChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const file = event.target.files?.[0];
+  if (!file) return;
+
+  if (!file.type.startsWith('image/')) {
+    toast.error('Please select a valid image file');
+    return;
+  }
+
+  if (file.size > 5 * 1024 * 1024) {
+    toast.error('File size must be less than 5MB');
+    return;
+  }
+
+  setUploading(true);
+  
+  try {
+    const formData = new FormData();
+    formData.append('profilePicture', file);
+
+    const result = await uploadFile("/users/upload-avatar", formData);
+    
+    // Update the form with the new profile picture URL
+    profileForm.setValue('profilePicture', result.profilePicture);
+    handleProfileFormSubmit({ 
+      name: profileForm.getValues('name'), 
+      profilePicture: result.profilePicture 
+    });
+    toast.success('Avatar updated successfully');
+  } catch (error: any) {
+    console.error('Upload error:', error);
+    const errorMessage = error.response?.data?.error || 'Failed to upload avatar';
+    toast.error(errorMessage);
+  } finally {
+    setUploading(false);
+  }
+
+  // Clear the file input
+  event.target.value = '';
+};
+
+const getImageUrl = (imagePath: string | undefined) => {
+  if (!imagePath) return undefined;
+  
+  // If it's already a full URL, return as is
+  if (imagePath.startsWith('http')) {
+    return imagePath;
+  }
+  
+  // Construct full URL for relative paths
+  const baseUrl = import.meta.env.VITE_API_URL?.replace('/api-v1', '') || 'http://localhost:5000';
+  return `${baseUrl}/${imagePath}`;
+};
+
+ const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
+  };
+
+  const toggleConfirmPasswordVisibility = () => {
+    setShowConfirmPassword(!showConfirmPassword);
+  };
+
+  
   if (isPending)
     return (
       <div className="flex justify-center items-center h-screen">
@@ -164,10 +234,25 @@ const Profile = () => {
               className="grid gap-4"
             >
               <div className="flex items-center space-x-4 mb-6">
-                <Avatar className="h-20 w-20 bg-gray-600">
+                {/* <Avatar className="h-20 w-20 bg-gray-600">
+  <AvatarImage
+    src={
+      profileForm.watch("profilePicture") 
+        ? `${import.meta.env.VITE_API_URL?.replace('/api-v1', '') || 'http://localhost:5000'}/${profileForm.watch("profilePicture")}`
+        : user?.profilePicture 
+          ? `${import.meta.env.VITE_API_URL?.replace('/api-v1', '') || 'http://localhost:5000'}/${user.profilePicture}`
+          : undefined
+    }
+    alt={user?.name}
+  />
+  <AvatarFallback className="text-xl">
+    {user?.name?.charAt(0) || "U"}
+  </AvatarFallback>
+</Avatar> */}
+                 <Avatar className="h-20 w-20 bg-gray-600">
                   <AvatarImage
                     src={
-                      profileForm.watch("profilePicture") ||
+                     getImageUrl(profileForm.watch("profilePicture")) ||
                       user?.profilePicture
                     }
                     alt={user?.name}
@@ -175,27 +260,34 @@ const Profile = () => {
                   <AvatarFallback className="text-xl">
                     {user?.name?.charAt(0) || "U"}
                   </AvatarFallback>
-                </Avatar>
+                </Avatar> 
                 <div>
                   <input
                     id="avatar-upload"
                     type="file"
                     accept="image/*"
-                    // onChange={handleAvatarChange}
-                    // disabled={uploading || isUpdatingProfile}
+                    onChange={handleAvatarChange}
+                    disabled={uploading || isUpdatingProfile}
                     style={{ display: "none" }}
                   />
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={() =>
-                      document.getElementById("avatar-upload")?.click()
-                    }
-                    // disabled={uploading || isUpdatingProfile}
-                  >
-                    Change Avatar
-                  </Button>
+                 <Button
+  type="button"
+  size="sm"
+  variant="outline"
+  onClick={() =>
+    document.getElementById("avatar-upload")?.click()
+  }
+  disabled={uploading || isUpdatingProfile}
+>
+  {uploading ? (
+    <>
+      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+      Uploading...
+    </>
+  ) : (
+    "Change Avatar"
+  )}
+</Button>
                 </div>
               </div>
               <FormField
@@ -241,83 +333,125 @@ const Profile = () => {
           </Form>
         </CardContent>
       </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Security</CardTitle>
-          <CardDescription>Update your password.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Form {...form}>
-            <form
-              onSubmit={form.handleSubmit(handlePasswordChange)}
-              className="grid gap-4"
-            >
-              {error && (
-                <Alert variant="destructive">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>{error.message}</AlertDescription>
-                </Alert>
-              )}
-
-              <div className="grid gap-2">
-                <FormField
-                  control={form.control}
-                  name="currentPassword"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Current Password</FormLabel>
-                      <FormControl>
-                        <Input
-                          id="current-password"
-                          type="password"
-                          placeholder="********"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="newPassword"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>New Password</FormLabel>
-                      <FormControl>
-                        <Input
-                          id="new-password"
-                          type="password"
-                          placeholder="********"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="confirmPassword"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Confirm Password</FormLabel>
-                      <FormControl>
-                        <Input
-                          id="confirm-password"
-                          placeholder="********"
-                          type="password"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+     
+     <Card>
+  <CardHeader>
+    <CardTitle>Security</CardTitle>
+    <CardDescription>Update your password.</CardDescription>
+  </CardHeader>
+  <CardContent>
+    <Form {...form}>
+      <form
+        onSubmit={form.handleSubmit(handlePasswordChange)}
+        className="grid gap-4"
+      >
+        {error && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{error.message}</AlertDescription>
+          </Alert>
+        )}
+        
+        <div className="grid gap-2">
+          <FormField
+            control={form.control}
+            name="currentPassword"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Current Password</FormLabel>
+                <FormControl>
+                  <div className="relative">
+                    <Input
+                      type={showPassword ? "text" : "password"}
+                      id="current-password"
+                      placeholder="********"
+                      {...field}
+                      className="pr-10"
+                    />
+                    <button
+                      type="button"
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                      onClick={togglePasswordVisibility}
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </button>
+                  </div>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
+          <FormField
+            control={form.control}
+            name="newPassword"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>New Password</FormLabel>
+                <FormControl>
+                  <div className="relative">
+                    <Input
+                      type={showPassword ? "text" : "password"}
+                      id="new-password"
+                      placeholder="********"
+                      {...field}
+                      className="pr-10"
+                    />
+                    <button
+                      type="button"
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                      onClick={togglePasswordVisibility}
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </button>
+                  </div>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
+          <FormField
+            control={form.control}
+            name="confirmPassword"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Confirm Password</FormLabel>
+                <FormControl>
+                  <div className="relative">
+                    <Input
+                      id="confirm-password"
+                      placeholder="********"
+                      type={showConfirmPassword ? "text" : "password"}
+                      {...field}
+                      className="pr-10"
+                    />
+                    <button
+                      type="button"
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                      onClick={toggleConfirmPasswordVisibility}
+                    >
+                      {showConfirmPassword ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </button>
+                  </div>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
 
               <Button
                 type="submit"

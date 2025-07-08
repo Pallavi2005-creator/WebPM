@@ -1,6 +1,43 @@
-
 import User from "../models/user.js";
 import bcrypt from "bcrypt";
+import path from "path";
+import fs from "fs";
+
+
+const uploadAvatar = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: "No file uploaded" });
+    }
+
+    const user = await User.findById(req.user._id);
+    
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Delete old profile picture if exists
+    if (user.profilePicture) {
+      const oldImagePath = path.join(process.cwd(), user.profilePicture);
+      if (fs.existsSync(oldImagePath)) {
+        fs.unlinkSync(oldImagePath);
+      }
+    }
+
+    // Update user with new profile picture path
+    const profilePicturePath = `uploads/avatars/${req.file.filename}`;
+    user.profilePicture = profilePicturePath;
+    await user.save();
+
+    res.status(200).json({
+      message: "Avatar uploaded successfully",
+      profilePicture: profilePicturePath
+    });
+  } catch (error) {
+    console.error("Error uploading avatar:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
 
 const getUserProfile = async (req, res) => {
   try {
@@ -82,4 +119,4 @@ const changePassword = async (req, res) => {
   }
 };
 
-export { getUserProfile, updateUserProfile, changePassword };
+export { getUserProfile, updateUserProfile, changePassword, uploadAvatar };

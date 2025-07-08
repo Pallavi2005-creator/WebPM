@@ -10,6 +10,7 @@ import {
 import type { Route } from "./+types/root";
 import "./app.css";
 import ReactQueryProvider from "./provider/react-query-provider";
+import { ThemeProvider } from "./components/theme-provider";
 
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -42,11 +43,14 @@ export function Layout({ children }: { children: React.ReactNode }) {
   );
 }
 
-export default function App() {
+export default function App({ children }: { children?: React.ReactNode }) {
   return (
+    <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
+      {children}
     <ReactQueryProvider>
       <Outlet />
     </ReactQueryProvider>
+    </ThemeProvider>
   );
 }
 
