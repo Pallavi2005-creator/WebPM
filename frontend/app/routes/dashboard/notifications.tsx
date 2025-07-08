@@ -113,7 +113,7 @@ export default function NotificationsPage() {
         <div className="flex items-center justify-center py-12">
           <div className="text-center">
             <AlertCircle className="w-16 h-16 text-red-500 mb-4 mx-auto" />
-            <h3 className="text-xl font-semibold mb-2">Error loading notifications</h3>
+            <h3 className="text-xl font-semibold mb-2">Upcoming Feature</h3>
             <p className="text-muted-foreground">{error}</p>
           </div>
         </div>
