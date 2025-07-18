@@ -38,7 +38,7 @@ WebPM is a modern, responsive Project Management Dashboard built with the MERN s
 | Backend     | Node.js, Express.js                               |
 | Database    | MongoDB                                           |
 | Auth        | Auth0, JWT, Google OAuth, Email Verification      |
-| Deployment  | (Add if deployed: e.g., Vercel / Render / Netlify)|
+| Deployment  | (Vercel, Render)|
 
 ---
 
