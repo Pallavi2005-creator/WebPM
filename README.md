@@ -1,10 +1,10 @@
 # WebPM – MERN Stack Project Management Dashboard
 
-![WebPM Banner](./banner.png) <!-- Optional: add banner or screenshot path -->
+[WebPM Banner]<!-- Optional: add banner or screenshot path -->
 
 WebPM is a modern, responsive Project Management Dashboard built with the MERN stack (MongoDB, Express.js, React, Node.js). It enables users to manage workspaces, projects, and tasks with powerful collaboration tools and user-centric design.
 
-🔗 Live Demo (optional): [your-deployed-link-here]
+🔗 Live Demo (optional): [https://web-pm.vercel.app/]
 
 📂 GitHub Repo: https://github.com/Pallavi2005-creator/WebPM
 
@@ -44,18 +44,6 @@ WebPM is a modern, responsive Project Management Dashboard built with the MERN s
 
 ---
 
-## 📸 Screenshots
-
-<!-- Add your screenshots in the repo and link like this -->
-
-| Dashboard | Project View | Task Panel | Auth Flow |
-|----------|---------------|------------|-----------|
-| ![ss1](./screenshots/dashboard.png) | ![ss2](./screenshots/project.png) | ![ss3](./screenshots/task.png) | ![ss4](./screenshots/auth.png) |
-
-> Add your own screenshots to the /screenshots folder in your repo and update links accordingly.
-
----
-
 ## 📦 Setup Instructions
 
 Clone the repo:
@@ -63,3 +51,16 @@ Clone the repo:
 ```bash
 git clone https://github.com/Pallavi2005-creator/WebPM.git
 cd WebPM
+
+Install dependencies:
+
+Frontend (React):
+cd client
+npm install
+npm run dev
+
+Backend (Node.js):
+cd server
+npm install
+npm start
+
