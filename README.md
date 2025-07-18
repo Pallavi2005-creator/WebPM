@@ -1,7 +1,5 @@
 # WebPM – MERN Stack Project Management Dashboard
 
-[WebPM Banner]<!-- Optional: add banner or screenshot path -->
-
 WebPM is a modern, responsive Project Management Dashboard built with the MERN stack (MongoDB, Express.js, React, Node.js). It enables users to manage workspaces, projects, and tasks with powerful collaboration tools and user-centric design.
 
 🔗 Live Demo (optional): [https://web-pm.vercel.app/]
