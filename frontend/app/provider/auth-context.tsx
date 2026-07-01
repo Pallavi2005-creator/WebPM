@@ -3,6 +3,7 @@ import { createContext, useContext, useEffect, useState } from "react";
 import { queryClient } from "./react-query-provider";
 import { useLocation, useNavigate } from "react-router";
 import { publicRoutes } from "@/lib";
+import { connectSocket, disconnectSocket } from "@/lib/socket";
 
 interface AuthContextType {
   user: User | null;
@@ -33,6 +34,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         if (storedUser) {
           setUser(JSON.parse(storedUser));
           setIsAuthenticated(true);
+          connectSocket();
         } else {
           setUser(null);
           setIsAuthenticated(false);
@@ -65,6 +67,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     setUser(data.user);
     setIsAuthenticated(true);
+    connectSocket();
   };
 
   const logout = async () => {
@@ -73,6 +76,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     setUser(null);
     setIsAuthenticated(false);
+    disconnectSocket();
 
     queryClient.clear();
   };

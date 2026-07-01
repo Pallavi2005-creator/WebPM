@@ -7,6 +7,9 @@ import {
   createProject,
   getProjectDetails,
   getProjectTasks,
+  getProjectRisk,        // ADD
+  getProjectRiskHistory, // ADD
+  recomputeProjectRisk,
 } from "../controllers/project.js";
 
 const router = express.Router();
@@ -38,4 +41,26 @@ router.get(
   validateRequest({ params: z.object({ projectId: z.string() }) }),
   getProjectTasks
 );
+
+router.get(
+  "/:projectId/risk",
+  authMiddleware,
+  validateRequest({ params: z.object({ projectId: z.string() }) }),
+  getProjectRisk
+);
+
+router.get(
+  "/:projectId/risk/history",
+  authMiddleware,
+  validateRequest({ params: z.object({ projectId: z.string() }) }),
+  getProjectRiskHistory
+);
+
+router.post(
+  "/:projectId/risk/recompute",
+  authMiddleware,
+  validateRequest({ params: z.object({ projectId: z.string() }) }),
+  recomputeProjectRisk
+);
+
 export default router;

@@ -27,6 +27,8 @@ const activityLogSchema = new Schema(
         "joined_workspace",
         "transferred_workspace_ownership",
         "added_attachment",
+        "ai_triaged_task",
+        "ai_risk_computed",
       ],
     },
     resourceType: {

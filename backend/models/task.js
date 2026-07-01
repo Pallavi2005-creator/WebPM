@@ -14,9 +14,14 @@ const taskSchema = new Schema(
       enum: ["To Do", "In Progress", "Review", "Done"],
       default: "To Do",
     },
+    aiPriority: {
+  type: String,
+  enum: ["Low", "Medium", "High", "Urgent"],
+  default: null,
+},
     priority: {
       type: String,
-      enum: ["Low", "Medium", "High"],
+      enum: ["Low", "Medium", "High", "Urgent"],
       default: "Medium",
     },
     assignees: [{ type: Schema.Types.ObjectId, ref: "User" }],
@@ -26,6 +31,17 @@ const taskSchema = new Schema(
     estimatedHours: { type: Number, min: 0 },
     actualHours: { type: Number, min: 0 },
     tags: [{ type: String }],
+    aiComplexity: {
+  type: String,
+  enum: ["S", "M", "L", "XL"],
+  default: null,
+},
+aiSuggestedTags: [{ type: String }],
+aiTriageStatus: {
+  type: String,
+  enum: ["pending", "completed", "failed", "skipped"],
+  default: "pending",
+},
     subtasks: [
       {
         title: {

@@ -4,10 +4,17 @@ import express from "express";
 import mongoose from "mongoose";
 import morgan from "morgan";
 import path from "path";
+import http from "http";
 
 import routes from "./routes/index.js";
+import { initializeSocket } from "./socket/socket-server.js";
+import { startRiskCron } from "./jobs/riskCron.js";
 
 dotenv.config();
+
+console.log("MONGODB_URI =", process.env.MONGODB_URI);
+console.log("FRONTEND_URL =", process.env.FRONTEND_URL);
+console.log("PORT =", process.env.PORT);
 
 const app = express();
 
@@ -53,6 +60,17 @@ app.use((req, res) => {
   });
 });
 
-app.listen(PORT, () => {
+// app.listen(PORT, () => {
+//   console.log(`Server running on port ${PORT}`);
+// });
+
+const server = http.createServer(app);
+
+// attach Socket.IO to the same server — this is the line that was missing
+initializeSocket(server);
+startRiskCron();
+
+server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
+

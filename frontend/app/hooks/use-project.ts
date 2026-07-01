@@ -28,3 +28,23 @@ export const UseProjectQuery = (projectId: string) => {
     queryFn: () => fetchData(`/projects/${projectId}/tasks`),
   });
 };
+
+export const UseProjectRiskQuery = (projectId: string) => {
+  return useQuery({
+    queryKey: ["project-risk", projectId],
+    queryFn: () => fetchData(`/projects/${projectId}/risk`),
+    retry: false, // a 404 (no risk data yet) is expected, not worth retrying
+  });
+};
+
+export const UseRecomputeProjectRisk = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (projectId: string) =>
+      postData(`/projects/${projectId}/risk/recompute`, {}),
+    onSuccess: (data: any, projectId: string) => {
+      queryClient.invalidateQueries({ queryKey: ["project-risk", projectId] });
+    },
+  });
+};

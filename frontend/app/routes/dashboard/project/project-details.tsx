@@ -15,6 +15,11 @@ import { format } from "date-fns";
 import { AlertCircle, Calendar, CheckCircle, Clock } from "lucide-react";
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router";
+import { ProjectHealthCard } from "@/components/project/project-health-card";
+import { useEffect } from "react";
+import { getSocket } from "@/lib/socket"; // adjust path if yours differs
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 const ProjectDetails = () => {
   const { projectId, workspaceId } = useParams<{
@@ -33,6 +38,52 @@ const ProjectDetails = () => {
     };
     isLoading: boolean;
   };
+
+  const queryClient = useQueryClient();
+useEffect(() => {
+  if (!workspaceId || !projectId) return;
+
+  const socket = getSocket(); // CHANGED: just get the existing instance, don't force-connect
+  console.log("👀 in ProjectDetails effect, socket.connected =", socket.connected); // ADD
+
+  const joinRoom = () => {
+    console.log("🚪 emitting join_workspace for", workspaceId);
+    socket.emit("join_workspace", workspaceId);
+  };
+
+  if (socket.connected) {
+    joinRoom();
+  } else {
+    socket.once("connect", joinRoom); // wait for connection if not ready yet
+  }
+
+  const handleAiTriaged = (payload: {
+    taskId: string;
+    projectId: string;
+    priority: string;
+    complexity: string;
+    suggestedTags: string[];
+    reasoning: string;
+  }) => {
+    if (payload.projectId !== projectId) return;
+
+    toast.success(
+      `AI triaged a task: ${payload.priority} priority — tags: ${payload.suggestedTags.join(", ")}`
+    );
+
+    queryClient.invalidateQueries({ queryKey: ["project", projectId] });
+  };
+
+  socket.on("task:ai-triaged", handleAiTriaged);
+
+  return () => {
+    socket.off("task:ai-triaged", handleAiTriaged);
+    socket.off("connect", joinRoom);
+    if (socket.connected) {
+      socket.emit("leave_workspace", workspaceId);
+    }
+  };
+}, [workspaceId, projectId, queryClient]);
 
   if (isLoading)
     return (
@@ -77,6 +128,9 @@ const ProjectDetails = () => {
           <Button onClick={() => setIsCreateTask(true)}>Add Task</Button>
         </div>
       </div>
+
+      {/* ADD THIS */}
+      <ProjectHealthCard projectId={projectId!} />
 
       <div className="flex items-center justify-between">
         <Tabs defaultValue="all" className="w-full">

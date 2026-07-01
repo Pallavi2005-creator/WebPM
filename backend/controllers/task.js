@@ -4,6 +4,8 @@ import Comment from "../models/comment.js";
 import Project from "../models/project.js";
 import Task from "../models/task.js";
 import Workspace from "../models/workspace.js";
+import { triageTask } from "../libs/aiTriage.js";
+import { getSocketIO } from "../socket/socket-server.js";
 
 const createTask = async (req, res) => {
   try {
@@ -52,6 +54,9 @@ const createTask = async (req, res) => {
     await project.save();
 
     res.status(201).json(newTask);
+
+     // --- AI triage runs after response, fire-and-forget ---
+    runTriageInBackground(newTask, project, workspace);
   } catch (error) {
     console.log(error);
     return res.status(500).json({
@@ -190,6 +195,44 @@ const updateTaskDescription = async (req, res) => {
     });
   }
 };
+
+// New helper function — keep createTask itself clean
+async function runTriageInBackground(task, project, workspace) {
+  console.log("🔵 runTriageInBackground called for task:", task.title);
+  try {
+    const result = await triageTask({
+      title: task.title,
+      description: task.description,
+      existingTags: project.tags || [],
+    });
+
+    task.aiPriority = result.priority;       // see note below re: schema
+    task.aiComplexity = result.complexity;
+    task.aiSuggestedTags = result.suggestedTags;
+    task.aiTriageStatus = "completed";
+    await task.save();
+
+    console.log(`✅ AI triage completed for task "${task.title}":`, result);
+
+    const io = getSocketIO();
+    io.to(`workspace_${workspace._id}`).emit("task:ai-triaged", {
+      taskId: task._id,
+      projectId: project._id,
+      priority: result.priority,
+      complexity: result.complexity,
+      suggestedTags: result.suggestedTags,
+      reasoning: result.reasoning,
+    });
+
+    await recordActivity(task.createdBy, "ai_triaged_task", "Task", task._id, {
+      description: `AI suggested priority "${result.priority}" and tags: ${result.suggestedTags.join(", ")}`,
+    });
+  } catch (error) {
+    console.log("AI triage failed:", error);
+    task.aiTriageStatus = "failed";
+    await task.save().catch(() => {}); // don't let a save failure throw inside a catch block
+  }
+}
 
 const updateTaskStatus = async (req, res) => {
   try {
