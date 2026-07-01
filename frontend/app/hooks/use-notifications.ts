@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import socket from "@/lib/socket";
+import { getSocket } from "@/lib/socket";
 import {
   getNotifications,
   markNotificationAsRead,
@@ -105,6 +105,7 @@ export function useNotifications() {
   useEffect(() => {
     fetchNotifications(); // initial load
 
+    const socket = getSocket();
     socket.on("new_notification", (newNotif: Notification) => {
       setNotifications(prev => [newNotif, ...prev]);
       setUnreadCount(prev => prev + 1);
